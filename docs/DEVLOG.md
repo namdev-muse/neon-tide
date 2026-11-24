@@ -75,3 +75,28 @@ query compacts the panel on short viewports. Re-swept: all 12 cards
 M2 is NOT done until the 04:30 run's live real-browser FUN playtest
 says GO on a spread of breaks (early, mid, late) — upload +
 live playtest belong to that run.
+
+## M2 — playtest NO-GO, fix in flight (04:30 run, v0.2.0 live)
+
+Live FUN playtest (breaks 1, 6, 12, manual, no bot hooks): ride GO
+on all three — carving responsive, pocket readable, identities
+distinct, "kept making me want another try"; 720p menu fits; no
+console errors, no dead buttons. Verdict NO-GO: the playtester
+could not verify the pump → FLOW → launch loop and reported
+mouse-hold does not pump (~10 attempts, all died at the first
+crest), so FLOW never filled for them.
+
+Investigation: the mouse-pump claim was checked with a controlled
+Playwright true-hold probe — speed 11.68 → 15.73, FLOW 0 → 0.675
+over a 4s hold on break 1. Mouse pump WORKS; the playtester's holds
+evidently never registered as a sustained mousedown on the canvas
+(M1's live playtest verified the same path). The release edge is
+the same flag the autopilot uses to clear break 1 live (4 jumps /
+4 clean). The NO-GO's central defect is refuted, but a refutation
+is not a GO — M2 stays open until a focused re-playtest
+experiences the launch loop and calls it.
+
+Genuine defect fixed from the playtest: the break-12 menu hint
+read "Clear Void Crown to unlock break 12." — now "Final break —
+you have unlocked them all." (game.js only, v0.2.0 unchanged).
+Full run log: hidden_files/milestone-M2.md in the sprint workspace.
