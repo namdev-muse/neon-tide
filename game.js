@@ -617,7 +617,9 @@ function updateMenuText() {
     ? `Best on ${b.name}: ${best.score} pts in ${fmtTime(best.time)}`
     : `Break ${b.id} of ${BREAKS.length} — ${b.name}, ${b.length}m.`;
   $('menu-hint').textContent = b.hint;
-  $('break-hint').textContent = `Clear ${b.name} to unlock break ${Math.min(b.id + 1, BREAKS.length)}.`;
+  $('break-hint').textContent = b.id >= BREAKS.length
+    ? 'Final break — you have unlocked them all.'
+    : `Clear ${b.name} to unlock break ${b.id + 1}.`;
 }
 function updateMuteButtons() {
   const label = state.muted ? 'Sound: Off' : 'Sound: On';
