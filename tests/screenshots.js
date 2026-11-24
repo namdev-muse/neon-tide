@@ -1,6 +1,6 @@
-// Neon Tide v0.1.0 — size sweep: menu + settings + gameplay + pause
+// Neon Tide v0.2.0 — size sweep: menu + settings + gameplay + pause
 // screenshots at 1280x720, 2560x1080 and 1080x2340, plus a break-3
-// framing shot, for inspection by eye.
+// framing shot and a break-12 framing shot, for inspection by eye.
 // Same serving + Three.js-fulfilment setup as tests/render-check.js.
 // Run: node tests/screenshots.js
 import fs from 'node:fs';
@@ -123,6 +123,24 @@ try {
     console.log('screenshots: break3-1280x720.png saved');
     await context.close();
   }
+  // A break-12 framing shot (Void Crown, the hardest break — its
+  // purple accent tint should read clearly) at the moment the
+  // autopilot first passes 100m.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, timezoneId: 'Asia/Bangkok', hasTouch: true });
+    const page = await context.newPage();
+    page.on('console', (msg) => { if (msg.type() === 'error') errors.push('break12 console: ' + msg.text()); });
+    page.on('pageerror', (err) => errors.push('break12 pageerror: ' + String(err)));
+    await page.route(THREE_URL, (route) => route.fulfill({ path: cached }));
+    await page.goto(`http://127.0.0.1:${port}/?break=12`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForFunction(() => window.__tide && window.__tide.phase === 'playing', null, { timeout: 30000 });
+    await page.evaluate(() => window.__tide.autopilot(true));
+    await page.waitForFunction(() => window.__tide.info().maxDist >= 100, null, { timeout: 120000 });
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: path.join(SHOTS_DIR, 'break12-1280x720.png'), timeout: 60000 });
+    console.log('screenshots: break12-1280x720.png saved');
+    await context.close();
+  }
   fs.mkdirSync(DOCS_SHOTS_DIR, { recursive: true });
   for (const [src, dst] of [
     ['menu-1280x720.png', 'menu.png'],
@@ -136,7 +154,7 @@ try {
     errors.forEach((e) => console.error('  ' + e));
     process.exitCode = 1;
   } else {
-    console.log(`screenshots: done — 13 shots in ${SHOTS_DIR} (menu/gameplay copied to docs/screenshots/), zero console/page errors. INSPECT BY EYE.`);
+    console.log(`screenshots: done — 14 shots in ${SHOTS_DIR} (menu/gameplay copied to docs/screenshots/), zero console/page errors. INSPECT BY EYE.`);
   }
 } catch (err) {
   console.error('screenshots: FAIL —', err.message);

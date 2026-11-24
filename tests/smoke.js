@@ -1,4 +1,4 @@
-// Neon Tide v0.1.0 — Node smoke tests for physics.js (no DOM, no Three.js).
+// Neon Tide v0.2.0 — Node smoke tests for physics.js (no DOM, no Three.js).
 import {
   VERSION, BREAKS, breakById, breakThreat, DT, GRAVITY, START_SPEED,
   STALL_SPEED, MAX_SPEED, FACE_HALF, POCKET_HALF, CARVE_ACCEL,
@@ -18,13 +18,14 @@ function check(name, cond) {
 }
 function approx(a, b, eps = 1e-9) { return Math.abs(a - b) <= eps; }
 
-check('physics version is 0.1.0', VERSION === '0.1.0');
-check('3 breaks defined', BREAKS.length === 3);
-check('break ids are 1..3 in order', BREAKS.every((b, i) => b.id === i + 1));
+check('physics version is 0.2.0', VERSION === '0.2.0');
+check('12 breaks defined', BREAKS.length === 12);
+check('break ids are 1..12 in order', BREAKS.every((b, i) => b.id === i + 1));
 check('every break has a name and a hint', BREAKS.every((b) => b.name && b.hint));
-check('every break has a distinct accent', new Set(BREAKS.map((b) => b.accent)).size === 3);
+check('every break has a distinct accent', new Set(BREAKS.map((b) => b.accent)).size === 12);
 check('breakById finds break 1', breakById(1) && breakById(1).name === 'First Swell');
 check('breakById finds break 3', breakById(3) && breakById(3).name === 'Violet Break');
+check('breakById finds break 12', breakById(12) && breakById(12).name === 'Void Crown');
 check('breakById returns null for unknown id', breakById(99) === null);
 check('every break has 4+ crests', BREAKS.every((b) => b.crests.length >= 4));
 check('every break has 2+ checkpoints', BREAKS.every((b) => b.checkpoints.length >= 2));

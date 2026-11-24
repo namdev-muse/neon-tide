@@ -1,11 +1,11 @@
-// Neon Tide v0.1.0 — headless browser render check.
+// Neon Tide v0.2.0 — headless browser render check.
 // Serves the game dir over local HTTP, loads it in a headless
 // browser, and asserts the M1 core, by hook and by eye:
 //   - the menu renders over a LIVE 3D scene (the attract demo
 //     actually rides — the demo run advances), with no
 //     version/engine text anywhere the player can see, one clear
-//     primary Play action, and 3 break cards (break 1 unlocked,
-//     breaks 2-3 locked on a fresh save)
+//     primary Play action, and 12 break cards (break 1 unlocked,
+//     breaks 2-12 locked on a fresh save)
 //   - Play starts break 1 with the HUD; the surfer starts in the
 //     pocket at the start speed
 //   - carving is asserted in SCREEN space: ArrowLeft moves the
@@ -20,7 +20,7 @@
 //   - pause focuses Resume; Enter resumes; R restarts
 //   - shake 0 suppresses trauma; the rest state settles clean
 //     (trauma 0, FOV 62, time scale 1, FOV dip 0)
-//   - ?break=2 reaches break 2 and ?break=3 reaches break 3 (public unlock/seed path — Apex lesson)
+//   - ?break=2 reaches break 2 and ?break=12 reaches break 12 (public unlock/seed path — Apex lesson)
 //   - the canvas pixels actually change during a run
 //   - the FPS guard is present and steps the render scale down on demand
 //   - zero console errors and zero page errors, and a WebGL context exists
@@ -135,8 +135,8 @@ try {
   }
 
   const version = await page.evaluate(() => window.__tide.version);
-  if (version !== '0.1.0') throw new Error(`expected version 0.1.0, got ${version}`);
-  console.log('render-check: game module initialised, version 0.1.0');
+  if (version !== '0.2.0') throw new Error(`expected version 0.2.0, got ${version}`);
+  console.log('render-check: game module initialised, version 0.2.0');
 
   // WebGL context exists and the canvas is on screen.
   const gl = await page.evaluate(() => {
@@ -168,22 +168,22 @@ try {
   // text anywhere the player can see. Break 1 unlocked, breaks 2-3 locked.
   const menuText = await page.textContent('#menu');
   if (!menuText.includes('NEON TIDE')) throw new Error('menu title missing');
-  if (menuText.includes('v0.1.0') || menuText.includes('Three.js') || menuText.includes('0.160.0')) {
+  if (menuText.includes('v0.2.0') || menuText.includes('Three.js') || menuText.includes('0.160.0')) {
     throw new Error('menu shows version/engine text — it must live in the README only');
   }
   const playClass = await page.getAttribute('#btn-play', 'class');
   if (!playClass || !playClass.includes('primary')) throw new Error('Play is not the primary action');
   const breakCards = await page.locator('#break-select .track-card').count();
-  if (breakCards !== 3) throw new Error(`expected 3 break cards, got ${breakCards}`);
+  if (breakCards !== 12) throw new Error(`expected 12 break cards, got ${breakCards}`);
   const breaks = await page.evaluate(() => window.__tide.breaks.map((b) => b.name));
-  if (breaks.length !== 3 || breaks[0] !== 'First Swell' || breaks[2] !== 'Violet Break') {
+  if (breaks.length !== 12 || breaks[0] !== 'First Swell' || breaks[11] !== 'Void Crown') {
     throw new Error(`break list wrong: ${JSON.stringify(breaks)}`);
   }
   const unlocked = await page.evaluate(() => window.__tide.save.unlocked);
   if (unlocked !== 1) throw new Error(`fresh save should unlock only break 1, got ${unlocked}`);
   const lockedCards = await page.locator('#break-select .track-card:disabled').count();
-  if (lockedCards !== 2) throw new Error(`expected 2 locked break cards on a fresh save, got ${lockedCards}`);
-  console.log('render-check: menu renders — live 3D behind it, no version text, Play primary, 3 breaks, break 1 unlocked only');
+  if (lockedCards !== 11) throw new Error(`expected 11 locked break cards on a fresh save, got ${lockedCards}`);
+  console.log('render-check: menu renders — live 3D behind it, no version text, Play primary, 12 breaks, break 1 unlocked only');
 
   // The accessibility toggles work and restore cleanly.
   await page.click('#btn-settings');
@@ -410,12 +410,14 @@ try {
   if (!break2Name.includes('Crosscurrent')) throw new Error(`?break=2 should start Crosscurrent, got: ${break2Name}`);
   console.log('render-check: ?break=2 jumps straight into Crosscurrent (unlock path works)');
 
-  // ?break=3 reaches the last break (Violet Break).
-  await page.goto(`http://127.0.0.1:${port}/?break=3`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  // ?break=12 reaches the last break (Void Crown).
+  await page.goto(`http://127.0.0.1:${port}/?break=12`, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForFunction(() => window.__tide && window.__tide.phase === 'playing', null, { timeout: 30000 });
-  const break3 = await page.evaluate(() => window.__tide.info());
-  if (break3.breakId !== 3) throw new Error(`?break=3 should start break 3, got ${break3.breakId}`);
-  console.log('render-check: ?break=3 jumps straight into Violet Break (unlock path reaches the last break)');
+  const break12 = await page.evaluate(() => window.__tide.info());
+  if (break12.breakId !== 12) throw new Error(`?break=12 should start break 12, got ${break12.breakId}`);
+  const break12Name = await page.textContent('#hud-break');
+  if (!break12Name.includes('Void Crown')) throw new Error(`?break=12 should start Void Crown, got: ${break12Name}`);
+  console.log('render-check: ?break=12 jumps straight into Void Crown (unlock path reaches the last break)');
 
   // Regression: Try Again after losing a deep-linked LOCKED break.
   // The retry button must restart the break you are already in — the
@@ -423,7 +425,7 @@ try {
   // never goes negative and the fall toast is cleared on run end.
   await page.evaluate(() => { window.__tide.run.falls = 4; });
   await page.waitForFunction(() => window.__tide.phase === 'gameover', null, { timeout: 60000 });
-  if (!await page.isVisible('#gameover')) throw new Error('game-over screen not visible after the forced loss on break 3');
+  if (!await page.isVisible('#gameover')) throw new Error('game-over screen not visible after the forced loss on break 12');
   const overText = await page.textContent('#gameover-detail');
   if (overText.includes('-1m')) throw new Error(`game-over distance must not go negative, got: ${overText}`);
   const toastHidden = await page.evaluate(() => !document.getElementById('hud-toast').classList.contains('show'));
@@ -431,7 +433,7 @@ try {
   await page.click('#btn-retry');
   await page.waitForFunction(() => window.__tide.phase === 'playing', null, { timeout: 5000 });
   const retryInfo = await page.evaluate(() => window.__tide.info());
-  if (retryInfo.breakId !== 3 || retryInfo.falls !== 0) throw new Error(`Try Again should restart break 3 fresh, got ${JSON.stringify({ id: retryInfo.breakId, falls: retryInfo.falls })}`);
+  if (retryInfo.breakId !== 12 || retryInfo.falls !== 0) throw new Error(`Try Again should restart break 12 fresh, got ${JSON.stringify({ id: retryInfo.breakId, falls: retryInfo.falls })}`);
   console.log('render-check: Try Again restarts a deep-linked locked break (retry bypasses the menu lock); game-over distance non-negative, toast cleared');
 
   // Regression: the endRun setTimeout race. Losing a break schedules
