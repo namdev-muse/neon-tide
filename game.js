@@ -1,4 +1,4 @@
-// Neon Tide v0.1.0 — Three.js renderer + menus + game feel.
+// Neon Tide v0.2.0 — Three.js renderer + menus + game feel.
 // The simulation lives in physics.js (pure, no DOM); this file owns the
 // 3D scene, the screen stack, input, Web Audio SFX and the feel tiers.
 // The surfer rides down a channel (sim dist -> world -z, sim x -> world
@@ -251,6 +251,7 @@ function waveSwell(x, dist, t) {
 
 function buildBreakScene(brk) {
   currentBreak = brk;
+  pocketLight.color.set(brk.accent);
   if (waveMesh) {
     scene.remove(waveMesh);
     waveGeo.dispose();
@@ -276,10 +277,14 @@ function buildBreakScene(brk) {
   waveGeo.translate(0, 0, 10 - len / 2);
   const posAttr = waveGeo.attributes.position;
   waveBase = new Float32Array(posAttr.array);
-  // Vertex colours: cyan -> magenta across the face, dark in the gaps.
+  // Vertex colours: cyan -> magenta across the face, dark in the
+  // gaps — each tinted toward the break's own accent so every break
+  // reads as its own water (M2: per-break identity in the scene, not
+  // just in the data + cards).
   const colors = new Float32Array(posAttr.count * 3);
-  const cA = new THREE.Color(0x22e6ff);
-  const cB = new THREE.Color(0xff3df0);
+  const accent = new THREE.Color(brk.accent);
+  const cA = new THREE.Color(0x22e6ff).lerp(accent, 0.45);
+  const cB = new THREE.Color(0xff3df0).lerp(accent, 0.45);
   const cDark = new THREE.Color(0x0a0a22);
   for (let i = 0; i < posAttr.count; i++) {
     const x = posAttr.getX(i);
@@ -321,13 +326,13 @@ function buildBreakScene(brk) {
   bandGeo.setIndex(bandIdx);
   pocketBandBase = new Float32Array(bandPos);
   pocketBand = new THREE.Mesh(bandGeo, new THREE.MeshBasicMaterial({
-    color: 0x22e6ff, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false,
+    color: new THREE.Color(brk.accent), transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false,
   }));
   scene.add(pocketBand);
 
-  // Gap markers: magenta chevrons at each crest gap edge.
+  // Gap markers: accent-coloured chevrons at each crest gap edge.
   const coneGeo = new THREE.ConeGeometry(0.7, 2.2, 4);
-  const coneMat = new THREE.MeshBasicMaterial({ color: 0xff3df0 });
+  const coneMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(brk.accent) });
   for (const c of brk.crests) {
     for (const side of [-1, 1]) {
       const cone = new THREE.Mesh(coneGeo, coneMat);
@@ -595,7 +600,7 @@ function buildBreakCards() {
     btn.innerHTML = `<span class="tc-name">${b.id}. ${b.name}</span>`
       + `<span class="tc-meta">${b.length}m · par ${b.par}s</span>`
       + (best ? `<span class="tc-best">Best ${best.score}</span>${best.rank ? ` <span class="tc-rank rank-${best.rank}">${best.rank}</span>` : ''}` : '<span class="tc-best">Not ridden yet</span>')
-      + (locked ? '<span class="tc-meta">Locked — clear the previous break</span>' : '');
+      + (locked ? '<span class="tc-meta">Locked</span>' : '');
     btn.addEventListener('click', () => {
       ensureAudio();
       state.breakId = b.id;

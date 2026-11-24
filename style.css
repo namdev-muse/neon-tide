@@ -1,4 +1,4 @@
-/* Neon Tide v0.1.0 — neon UI: anchors + containers, reference 1920x1080 expand. */
+/* Neon Tide v0.2.0 — neon UI: anchors + containers, reference 1920x1080 expand. */
 :root {
   --cyan: #22e6ff;
   --magenta: #ff3df0;
@@ -124,12 +124,12 @@ h3 { color: var(--gold); margin: 14px 0 6px; letter-spacing: 0.08em; }
 
 /* ---------- climb select ---------- */
 .track-select {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
 }
 .track-card {
   text-align: left; font: inherit; color: var(--text);
   background: rgba(34, 230, 255, 0.07); border: 1px solid var(--panel-border);
-  border-radius: 10px; padding: 10px 12px; cursor: pointer;
+  border-radius: 10px; padding: 8px 10px; cursor: pointer;
   transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
 }
 .track-card:hover:not(:disabled), .track-card:focus-visible:not(:disabled) {
@@ -241,6 +241,18 @@ h3 { color: var(--gold); margin: 14px 0 6px; letter-spacing: 0.08em; }
   #hud { font-size: 0.85rem; gap: 8px; }
   #hud > div { gap: 8px; }
   .touch-btn { width: 56px; height: 56px; }
+}
+/* Short viewports (e.g. 1280x720): the 12-card menu must fit without
+   scrolling — tighten the panel so all 12 cards + the unlock hint are
+   visible at first glance (M2 eye-check defect). */
+@media (max-height: 760px) {
+  .panel { padding: 16px 24px; }
+  .panel-menu { gap: 4px 32px; }
+  h1 { font-size: 2.2rem; }
+  .tagline { margin-bottom: 10px; }
+  .menu-col { gap: 8px; }
+  .btn { padding: 10px 18px; }
+  .btn.primary { padding: 12px 22px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .panel { animation: none; }
