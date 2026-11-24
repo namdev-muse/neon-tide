@@ -1,0 +1,1 @@
+{"description":"Neon Tide — a 3D neon wave-surfer built with Three.js","license":"MIT","name":"neon-tide","scripts":{"bot":"node tests/bot.js","render-check":"node tests/render-check.js","screenshots":"node tests/screenshots.js","serve":"python3 -m http.server 8127","smoke":"node tests/smoke.js","test":"node tests/smoke.js && node tests/bot.js"},"type":"module","version":"0.1.0"}

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Neon Tide — 3D Neon Wave-Surfer</title>
+<meta name="description" content="Neon Tide: a 3D neon wave-surfer. Carve the wave face, pump for speed, launch off the crest and land clean in the pocket.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<div id="game-container"></div>
+<div id="hit-flash" class="hit-flash" aria-hidden="true"></div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <span id="hud-break">Break 1 — First Swell</span>
+    <span id="hud-time">0:00.0</span>
+    <span id="hud-best" class="hud-best">Best —</span>
+  </div>
+  <div class="hud-mid">
+    <span id="hud-dist">0m / 300m</span>
+    <span id="hud-score">Score 0</span>
+    <span id="hud-pickups">Pickups 0/5</span>
+    <span id="hud-falls">Falls 0</span>
+    <span id="hud-flow" class="hud-swing"><span class="hud-swing-label">FLOW</span><span class="hud-swing-track"><span id="hud-flow-fill"></span></span></span>
+  </div>
+  <div class="hud-right">
+    <button id="btn-mute-hud" class="icon-btn" type="button" aria-label="Toggle sound">Sound: On</button>
+    <button id="btn-pause" class="icon-btn" type="button" aria-label="Pause game">Pause</button>
+  </div>
+</div>
+<div id="hud-toast" class="hud-toast" aria-hidden="true"></div>
+<div id="pops" class="pops" aria-hidden="true"></div>
+<div id="sr-status" class="sr-only" role="status" aria-live="polite"></div>
+
+<!-- Touch controls -->
+<div id="touch-controls" class="hidden">
+  <button id="btn-carve-left" class="touch-btn" type="button" aria-label="Carve left">&#9664;</button>
+  <button id="btn-surf" class="touch-btn grapple" type="button" aria-label="Hold to pump">SURF</button>
+  <button id="btn-carve-right" class="touch-btn" type="button" aria-label="Carve right">&#9654;</button>
+</div>
+
+<!-- Main menu -->
+<div id="menu" class="overlay">
+  <div class="panel panel-menu">
+    <h1>NEON TIDE</h1>
+    <p class="tagline">Carve the face. Pump the pocket. Launch off the crest — and land clean.</p>
+    <p id="webgl-error" class="webgl-error hidden">3D graphics couldn't start in this browser — Neon Tide needs WebGL. Try a recent Chrome, Edge or Firefox on a device with graphics support.</p>
+    <div class="menu-col menu-actions">
+      <button id="btn-play" class="btn primary" type="button">Play</button>
+      <button id="btn-howto" class="btn" type="button">How to Play</button>
+      <button id="btn-settings" class="btn" type="button">Settings</button>
+      <button id="btn-mute-menu" class="btn small" type="button">Sound: On</button>
+      <p id="menu-best" class="menu-best"></p>
+      <p id="menu-hint" class="menu-best"></p>
+    </div>
+    <div class="menu-col menu-setup">
+      <div id="break-select" class="track-select" aria-label="Break select"></div>
+      <p id="break-hint" class="set-hint"></p>
+    </div>
+  </div>
+</div>
+
+<!-- How to play -->
+<div id="howto" class="overlay hidden">
+  <div class="panel">
+    <h2>How to Play</h2>
+    <ul class="howto-list">
+      <li>You ride a rolling neon wave down a channel. The <strong>pocket</strong> — the fast water — drifts across the wave face as the break runs. Stay in it.</li>
+      <li><strong>Carve with A / D or Left / Right</strong> to track the pocket. Drift out of it and the wave leaves you behind.</li>
+      <li><strong>Hold Space / mouse / SURF to pump</strong> — crouch into the wave while you are in the pocket to build speed and <strong>FLOW</strong>. Pumping outside the pocket bogs the board down.</li>
+      <li><strong>Release Space at a crest</strong> to launch for air. The wave face ends at every crest — ride into the gap and you wipe out. Land clean in the pocket to keep your combo going.</li>
+      <li>Collect <strong>gold pickups</strong> along the good lines for score. Pass a <strong>checkpoint</strong> and a wipeout sends you back there, not to the start.</li>
+      <li>Fall off the face, land badly, or stall out and the run ends. <strong>5 falls</strong> ends the break. Ride the full channel to clear it.</li>
+      <li>Your <strong>best score</strong> is saved per break — beat it. Clearing a break unlocks the next one. Each clear earns a <strong>rank</strong>: S (no falls, under par), A (under par), B (cleared).</li>
+    </ul>
+    <h3>Controls</h3>
+    <ul class="howto-list">
+      <li>A / D or Left / Right: carve &middot; Hold Space / mouse button: pump &middot; Release Space at a crest: jump</li>
+      <li>P: pause &middot; M: mute &middot; R: restart</li>
+      <li>Touch: hold SURF to pump, drag left/right to carve</li>
+      <li>Esc closes a panel &middot; Enter confirms on menus</li>
+    </ul>
+    <button id="btn-howto-close" class="btn primary" type="button">Got it</button>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="settings" class="overlay hidden">
+  <div class="panel">
+    <h2>Settings</h2>
+    <label class="slider-row">Volume
+      <input id="volume-range" type="range" min="0" max="100" value="60" aria-label="Volume">
+      <span id="volume-value">60%</span>
+    </label>
+    <label class="slider-row">Screen shake
+      <input id="shake-range" type="range" min="0" max="100" value="100" aria-label="Screen shake strength">
+      <span id="shake-value">100%</span>
+    </label>
+    <label class="toggle-row">Music
+      <input id="music-toggle" type="checkbox" checked aria-label="Music on or off">
+    </label>
+    <label class="toggle-row">Sound effects
+      <input id="sfx-toggle" type="checkbox" checked aria-label="Sound effects on or off">
+    </label>
+    <label class="toggle-row">Reduce flashing
+      <input id="reduce-flashing" type="checkbox" aria-label="Reduce flashing — no bright flashes">
+    </label>
+    <label class="slider-row">Text size
+      <select id="text-size-select" aria-label="Text size">
+        <option value="1">Normal</option>
+        <option value="1.2">Large</option>
+        <option value="1.4">Extra large</option>
+      </select>
+    </label>
+    <label class="toggle-row">High contrast
+      <input id="high-contrast-toggle" type="checkbox" aria-label="High contrast — brighter text and panels">
+    </label>
+    <p id="perf-line" class="perf-line">Performance: —</p>
+    <button id="btn-settings-close" class="btn primary" type="button">Back to Menu</button>
+  </div>
+</div>
+
+<!-- Break complete -->
+<div id="complete" class="overlay hidden">
+  <div class="panel">
+    <h2>Break Ridden</h2>
+    <p id="complete-score" class="big-score">Score 0</p>
+    <p id="complete-detail"></p>
+    <p id="complete-best" class="complete-best"></p>
+    <p id="complete-rank" class="complete-best"></p>
+    <p id="complete-pickups" class="complete-best"></p>
+    <button id="btn-next" class="btn primary" type="button">Next Break</button>
+    <button id="btn-replay" class="btn" type="button">Ride Again</button>
+    <button id="btn-menu-complete" class="btn" type="button">Main Menu</button>
+  </div>
+</div>
+
+<!-- Break lost -->
+<div id="gameover" class="overlay hidden">
+  <div class="panel">
+    <h2>Wiped Out</h2>
+    <p id="gameover-detail" class="gameover-detail"></p>
+    <p id="gameover-best" class="complete-best"></p>
+    <button id="btn-retry" class="btn primary" type="button">Try Again</button>
+    <button id="btn-menu-over" class="btn" type="button">Main Menu</button>
+  </div>
+</div>
+
+<!-- Pause -->
+<div id="pause" class="overlay hidden">
+  <div class="panel">
+    <h2>Paused</h2>
+    <button id="btn-resume" class="btn primary" type="button">Resume</button>
+    <button id="btn-restart" class="btn" type="button">Restart Break</button>
+    <button id="btn-quit" class="btn" type="button">Quit to Menu</button>
+    <label class="slider-row">Screen shake
+      <input id="shake-range-pause" type="range" min="0" max="100" value="100" aria-label="Screen shake strength">
+      <span id="shake-value-pause">100%</span>
+    </label>
+    <button id="btn-mute-pause" class="btn small" type="button">Sound: On</button>
+  </div>
+</div>
+
+<script type="module" src="game.js"></script>
+</body>
+</html>
