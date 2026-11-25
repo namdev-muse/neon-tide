@@ -312,6 +312,18 @@ try {
   if (maxFlow <= 0.15) throw new Error(`flow should build while pumping, max sampled ${maxFlow}`);
   const meterW = await page.evaluate(() => document.getElementById('hud-flow-fill').style.width);
   if (!meterW || parseFloat(meterW) <= 0) throw new Error(`FLOW meter should show energy, fill width is ${meterW}`);
+  // The meter must actually RENDER, not just carry a width: a CSS id
+  // mismatch once left the fill unstyled (zero height, no background)
+  // so the bar stayed empty while flow built underneath it.
+  const meterVisible = await page.evaluate(() => {
+    const el = document.getElementById('hud-flow-fill');
+    const cs = getComputedStyle(el);
+    return { h: el.getBoundingClientRect().height, bg: cs.backgroundImage, color: cs.backgroundColor };
+  });
+  if (meterVisible.h <= 0) throw new Error(`FLOW meter fill must have height, got ${meterVisible.h}`);
+  if (meterVisible.bg === 'none' && (meterVisible.color === 'rgba(0, 0, 0, 0)' || meterVisible.color === 'transparent')) {
+    throw new Error('FLOW meter fill must have a visible background');
+  }
   console.log(`render-check: FLOW meter tracks flow energy (max ${maxFlow.toFixed(2)}, fill ${meterW})`);
   await page.keyboard.up('Space');
 
