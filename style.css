@@ -178,8 +178,8 @@ h3 { color: var(--gold); margin: 14px 0 6px; letter-spacing: 0.08em; }
 .hud-swing { display: flex; align-items: center; gap: 6px; }
 .hud-swing-label { font-size: 0.75rem; letter-spacing: 0.12em; color: var(--muted); }
 .hud-swing-track { width: 110px; height: 8px; border: 1px solid var(--panel-border); border-radius: 4px; overflow: hidden; background: rgba(34, 230, 255, 0.08); }
-#hud-swing-fill { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), var(--gold)); transition: width 0.08s linear; }
-#hud-swing-fill.hot { background: linear-gradient(90deg, var(--gold), #ff9f2e); box-shadow: 0 0 8px rgba(255, 215, 94, 0.8); }
+#hud-flow-fill { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), var(--gold)); transition: width 0.08s linear; }
+#hud-flow-fill.hot { background: linear-gradient(90deg, var(--gold), #ff9f2e); box-shadow: 0 0 8px rgba(255, 215, 94, 0.8); }
 .hud-toast {
   position: fixed; z-index: 6; left: 50%; top: 18%;
   transform: translateX(-50%) scale(0.9);
