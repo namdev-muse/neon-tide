@@ -1,4 +1,4 @@
-// Neon Tide v0.2.0 — bot harness gates.
+// Neon Tide v0.3.0 — bot harness gates.
 // The decision bot must clear every break with real carve/pump/jump
 // timing; the bots that must lose (hold one direction + pump forever,
 // no input, random, jump-spam) must lose on every break. If a

@@ -1,4 +1,4 @@
-// Neon Tide v0.2.0 — headless browser render check.
+// Neon Tide v0.3.0 — headless browser render check.
 // Serves the game dir over local HTTP, loads it in a headless
 // browser, and asserts the M1 core, by hook and by eye:
 //   - the menu renders over a LIVE 3D scene (the attract demo
@@ -135,8 +135,8 @@ try {
   }
 
   const version = await page.evaluate(() => window.__tide.version);
-  if (version !== '0.2.0') throw new Error(`expected version 0.2.0, got ${version}`);
-  console.log('render-check: game module initialised, version 0.2.0');
+  if (version !== '0.3.0') throw new Error(`expected version 0.3.0, got ${version}`);
+  console.log('render-check: game module initialised, version 0.3.0');
 
   // WebGL context exists and the canvas is on screen.
   const gl = await page.evaluate(() => {
@@ -168,7 +168,7 @@ try {
   // text anywhere the player can see. Break 1 unlocked, breaks 2-3 locked.
   const menuText = await page.textContent('#menu');
   if (!menuText.includes('NEON TIDE')) throw new Error('menu title missing');
-  if (menuText.includes('v0.2.0') || menuText.includes('Three.js') || menuText.includes('0.160.0')) {
+  if (menuText.includes('v0.3.0') || menuText.includes('Three.js') || menuText.includes('0.160.0')) {
     throw new Error('menu shows version/engine text — it must live in the README only');
   }
   const playClass = await page.getAttribute('#btn-play', 'class');
@@ -326,6 +326,38 @@ try {
   }
   console.log(`render-check: FLOW meter tracks flow energy (max ${maxFlow.toFixed(2)}, fill ${meterW})`);
   await page.keyboard.up('Space');
+
+  // A pump release that fails to launch names the reason (M3): restart
+  // fresh, ride to the first crest WITHOUT pumping (flow stays ~0),
+  // hold Space only for the last ~2m, release inside the window — the
+  // denied cue must fire ('flow') and the toast must name FLOW. The
+  // toast is transient (the gap wipeout replaces it ~0.4s later), so
+  // poll for it. (Holding Space from 44m would stall the rider first:
+  // pumping outside the pocket bogs, by design — a debug probe showed
+  // speed 7.6 -> stall at ~53m that way.)
+  await page.keyboard.press('KeyR');
+  await page.waitForTimeout(500);
+  await page.waitForFunction(() => {
+    const i = window.__tide.info();
+    return i && i.dist >= 54 && i.dist < 56;
+  }, null, { timeout: 30000 });
+  await page.keyboard.down('Space');
+  await page.waitForFunction(() => {
+    const i = window.__tide.info();
+    return i && i.dist >= 56.5;
+  }, null, { timeout: 30000 });
+  await page.keyboard.up('Space');
+  await page.waitForTimeout(150);
+  const denied = await page.evaluate(() => window.__tide.info().lastDenied);
+  if (denied !== 'flow') throw new Error(`expected denied cue 'flow' after a low-flow release in the window, got ${denied}`);
+  let deniedToastSeen = false;
+  for (let k = 0; k < 20; k++) {
+    const t = await page.textContent('#hud-toast');
+    if (t && t.includes('FLOW')) { deniedToastSeen = true; break; }
+    await page.waitForTimeout(50);
+  }
+  if (!deniedToastSeen) throw new Error('denied toast should name FLOW after a low-flow release');
+  console.log(`render-check: failed launch names the reason (denied 'flow', toast names FLOW)`);
 
   // Shake 0 suppresses trauma: jump while shake is 0, trauma stays 0.
   // (First let leftover trauma from the pumping above settle.)

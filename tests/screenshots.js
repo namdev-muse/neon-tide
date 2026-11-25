@@ -1,4 +1,4 @@
-// Neon Tide v0.2.0 — size sweep: menu + settings + gameplay + pause
+// Neon Tide v0.3.0 — size sweep: menu + settings + gameplay + pause
 // screenshots at 1280x720, 2560x1080 and 1080x2340, plus a break-3
 // framing shot and a break-12 framing shot, for inspection by eye.
 // Same serving + Three.js-fulfilment setup as tests/render-check.js.

@@ -1,4 +1,4 @@
-// Neon Tide v0.2.0 — Node smoke tests for physics.js (no DOM, no Three.js).
+// Neon Tide v0.3.0 — Node smoke tests for physics.js (no DOM, no Three.js).
 import {
   VERSION, BREAKS, breakById, breakThreat, DT, GRAVITY, START_SPEED,
   STALL_SPEED, MAX_SPEED, FACE_HALF, POCKET_HALF, CARVE_ACCEL,
@@ -18,7 +18,7 @@ function check(name, cond) {
 }
 function approx(a, b, eps = 1e-9) { return Math.abs(a - b) <= eps; }
 
-check('physics version is 0.2.0', VERSION === '0.2.0');
+check('physics version is 0.3.0', VERSION === '0.3.0');
 check('12 breaks defined', BREAKS.length === 12);
 check('break ids are 1..12 in order', BREAKS.every((b, i) => b.id === i + 1));
 check('every break has a name and a hint', BREAKS.every((b) => b.name && b.hint));
@@ -52,6 +52,8 @@ check('inGap is false before the first crest', !inGap(BREAKS[0], BREAKS[0].crest
 check('inGap is false after the gap ends', !inGap(BREAKS[0], BREAKS[0].crests[0] + BREAKS[0].gapWidth + 2));
 check('nextCrest finds the first crest ahead', nextCrest(BREAKS[0], 0) === BREAKS[0].crests[0]);
 check('nextCrest is null past the last crest', nextCrest(BREAKS[0], BREAKS[0].length) === null);
+check('nextCrest still names a crest through its launch window', nextCrest(BREAKS[0], 61) === BREAKS[0].crests[0]);
+check('nextCrest moves on past the window', nextCrest(BREAKS[0], 63) === BREAKS[0].crests[1]);
 
 // --- run lifecycle ---
 const run1 = startRun(1);
@@ -94,6 +96,45 @@ check('startRun returns null for unknown break', startRun(99) === null);
   check('flow is built before the release test', flow0 >= LAUNCH_MIN_FLOW);
   stepRun(r, { pump: false, carve: 0 }); // release at dist ~30, far from any crest
   check('releasing outside the launch window does not launch', r.airborne === false && r.jumps === 0);
+}
+// --- denied release: a failed launch names the reason (M3) ---
+// A release near a crest that does not launch reports why, so the
+// game can give post-action feedback; a release far from any crest
+// is just stopping the pump and stays silent.
+{
+  const setup = (dist, flow, speed) => {
+    const r = startRun(1);
+    r.dist = dist;
+    r.x = pocketX(r.brk, dist);
+    r.speed = speed;
+    r.flow = flow;
+    r.pumpHeld = true; // previous step held, so this release is an edge
+    return r;
+  };
+  const c0 = BREAKS[0].crests[0]; // 60
+  let r = setup(c0 - 10, 0.9, 14);
+  stepRun(r, { pump: false, carve: 0 });
+  check('release before the window reports early', r.deniedReason === 'early' && r.jumps === 0);
+  r = setup(c0 - 3, 0.1, 14);
+  stepRun(r, { pump: false, carve: 0 });
+  check('release in the window without flow reports flow', r.deniedReason === 'flow' && r.jumps === 0);
+  r = setup(c0 - 3, 0.9, 6);
+  stepRun(r, { pump: false, carve: 0 });
+  check('release in the window without speed reports speed', r.deniedReason === 'speed' && r.jumps === 0);
+  r = setup(c0 + 4, 0.9, 14);
+  stepRun(r, { pump: false, carve: 0 });
+  check('release past the crest reports late', r.deniedReason === 'late');
+  r = setup(30, 0.9, 14);
+  stepRun(r, { pump: false, carve: 0 });
+  check('release far from any crest reports nothing', r.deniedReason === null && r.jumps === 0);
+  r = setup(c0 - 3, 0.9, 14);
+  stepRun(r, { pump: false, carve: 0 });
+  check('a good release launches and reports nothing', r.airborne === true && r.deniedReason === null);
+  r = setup(c0 + 1, 0.9, 14);
+  stepRun(r, { pump: false, carve: 0 });
+  check('a release just past the crest lip still launches', r.airborne === true && r.deniedReason === null);
+  stepRun(r, { pump: false, carve: 0 });
+  check('denied reason clears on the next step', r.deniedReason === null);
 }
 // --- launch: release inside the window with flow + speed launches ---
 {
