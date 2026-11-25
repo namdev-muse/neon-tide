@@ -1,4 +1,4 @@
-// Neon Tide v0.2.0 — pure simulation core (no DOM, no Three.js).
+// Neon Tide v0.3.0 — pure simulation core (no DOM, no Three.js).
 // A 3D neon wave-surfer: the surfer rides a rolling wave down a
 // channel, carving the wave face to stay in the pocket (the fast
 // water), pumping (crouching into the wave) to build speed and flow,
@@ -26,7 +26,7 @@
 // the fixed-step simulation gives identical results for identical
 // inputs.
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 export const DT = 1 / 60;
 export const GRAVITY = 18; // air gravity
 export const START_SPEED = 12;
@@ -352,11 +352,28 @@ export function inPocket(brk, dist, x) {
 }
 
 // The next crest ahead of a distance (or null past the last one).
+// A crest still counts as "next" through the end of its launch
+// window (LAUNCH_WINDOW_AFTER past the lip), so a release just past
+// the crest can still launch — the window is really 6m wide, not 4m.
+// (Before this fix the +2m grace was dead code: nextCrest moved on
+// the moment the crest was passed, so releases at 61–62m silently
+// failed — exactly the failed releases the 07:19 playtest reported.)
 export function nextCrest(brk, dist) {
   for (const c of brk.crests) {
-    if (c > dist) return c;
+    if (c + LAUNCH_WINDOW_AFTER >= dist) return c;
   }
   return null;
+}
+
+// The crest most recently passed (or null before the first one) —
+// used to name a release that came just too late for its crest.
+export function lastCrest(brk, dist) {
+  let last = null;
+  for (const c of brk.crests) {
+    if (c <= dist) last = c;
+    else break;
+  }
+  return last;
 }
 
 // Is this distance inside a closeout gap (the wave face is gone here)?
@@ -398,6 +415,7 @@ export function createRun(brk) {
     maxDist: 0,
     score: 0,
     pumpHeld: false, // previous step's pump state — a launch fires on the release EDGE
+    deniedReason: null, // why the last pump release failed to launch ('early' | 'late' | 'flow' | 'speed') — cleared every step, read by the game for the post-action cue
     lastCheckpoint: 0, // index into brk.checkpoints
     graceT: 0,
   };
@@ -481,6 +499,7 @@ export function stepRun(run, input, dt = DT) {
   run.time += dt;
   const wasPumpHeld = run.pumpHeld;
   run.pumpHeld = pump;
+  run.deniedReason = null; // cleared every step — a denial is visible for exactly the step it happens on
 
   if (run.airborne) {
     // Ballistic air: gravity, weak carve steering, forward travel.
@@ -550,6 +569,11 @@ export function stepRun(run, input, dt = DT) {
     // Release edge: the launch. Only inside the launch window before
     // a crest, with real flow and speed — a release anywhere else just
     // stops pumping, and a spam of releases bleeds speed for nothing.
+    // A release near a crest that fails to launch names the reason
+    // (deniedReason) so the game can give post-action feedback — the
+    // cue fires only AFTER the player has already released, never
+    // before, so it teaches the timing without ever being an oracle.
+    // A release far from any crest is just stopping the pump: silence.
     if (wasPumpHeld) {
       const c = nextCrest(brk, run.dist);
       if (c !== null && run.dist >= c - LAUNCH_WINDOW_BEFORE && run.dist <= c + LAUNCH_WINDOW_AFTER
@@ -560,6 +584,18 @@ export function stepRun(run, input, dt = DT) {
         run.airTime = 0;
         run.jumps++;
         run.flow = clamp(run.flow - 0.2, 0, 1); // the launch spends flow
+      } else if (c !== null && run.dist >= c - LAUNCH_WINDOW_BEFORE - 12) {
+        if (run.dist < c - LAUNCH_WINDOW_BEFORE) run.deniedReason = 'early';
+        else if (run.dist > c + LAUNCH_WINDOW_AFTER) run.deniedReason = 'late';
+        else if (run.flow < LAUNCH_MIN_FLOW) run.deniedReason = 'flow';
+        else if (run.speed < LAUNCH_MIN_SPEED) run.deniedReason = 'speed';
+      } else {
+        // Just past a crest's window, inside its gap: the release
+        // came too late for the crest just passed.
+        const p = lastCrest(brk, run.dist);
+        if (p !== null && run.dist > p + LAUNCH_WINDOW_AFTER && run.dist <= p + brk.gapWidth) {
+          run.deniedReason = 'late';
+        }
       }
     }
   }
@@ -584,7 +620,10 @@ export function stepRun(run, input, dt = DT) {
   }
 
   // The wave face ends at every crest: riding into the gap is a wipeout.
-  if (inGap(brk, run.dist)) {
+  // A rider who JUST launched this step is already airborne over the
+  // gap — without this guard a release at 61–62m (inside the launch
+  // window's +2m grace) would wipe out in the same step it launched.
+  if (!run.airborne && inGap(brk, run.dist)) {
     wipeout(run, 'gap');
     return run;
   }

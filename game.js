@@ -1,4 +1,4 @@
-// Neon Tide v0.2.0 — Three.js renderer + menus + game feel.
+// Neon Tide v0.3.0 — Three.js renderer + menus + game feel.
 // The simulation lives in physics.js (pure, no DOM); this file owns the
 // 3D scene, the screen stack, input, Web Audio SFX and the feel tiers.
 // The surfer rides down a channel (sim dist -> world -z, sim x -> world
@@ -46,6 +46,8 @@ const state = {
   fovDip: 0,
   pumpTicks: 0,
   lastCarveSign: 0,
+  lastDenied: null, // sticky copy of the last failed-launch reason (for the render check + HUD cue)
+  lastDeniedToast: 0, // performance.now() of the last denied toast — throttles repeat toasts
   musicActive: false,
   toastT: 0,
   muted: save.settings.muted,
@@ -431,6 +433,16 @@ function addTrauma(amount) {
 function hitStop(dur) {
   state.hitStopT = Math.max(state.hitStopT, dur);
 }
+// Post-action cue for a pump release that failed to launch — the
+// reason is named AFTER the player acted, never before (no oracle).
+// Shown as a throttled toast + the 'denied' blip, so a mistimed
+// release is learnable instead of silent.
+const DENIED_COPY = {
+  early: 'Too early — release closer to the crest',
+  late: 'Too late — you passed the crest',
+  flow: 'Not enough FLOW — pump longer in the pocket',
+  speed: 'Too slow — build speed before the crest',
+};
 function feedback(event, energy = 0) {
   const fb = FEEDBACK[event];
   if (!fb) return;
@@ -674,6 +686,7 @@ function startBreak(id, unlockedOverride = false) {
   state.timeScale = 1;
   state.pumpTicks = 0;
   state.lastCarveSign = 0;
+  state.lastDenied = null;
   screenStack.length = 0;
   showOnly(null);
   $('hud').classList.remove('hidden');
@@ -920,6 +933,19 @@ function frame(now) {
           feedback('pickup');
           spawnParticles(activeRun.x, 2, -activeRun.dist, FEEDBACK.pickup.particles, 2, 3);
         }
+        // A failed launch names its reason (post-action only). The
+        // toast is throttled so jump-spam cannot strobe it; it sits
+        // before the wipeout check so a wipeout toast wins when a
+        // late release also falls in the gap.
+        if (activeRun.deniedReason) {
+          state.lastDenied = activeRun.deniedReason;
+          feedback('denied');
+          const now = performance.now();
+          if (now - state.lastDeniedToast > 1200) {
+            state.lastDeniedToast = now;
+            toast(DENIED_COPY[activeRun.deniedReason]);
+          }
+        }
         if (activeRun.falls > before.falls) {
           feedback('wipeout');
           spawnParticles(activeRun.x, 1, -activeRun.dist, FEEDBACK.wipeout.particles, 6, 5);
@@ -1072,6 +1098,7 @@ function info() {
     nextCrest: run ? nextCrest(run.brk, run.dist) : null,
     jumps: run ? run.jumps : 0,
     cleanLandings: run ? run.cleanLandings : 0,
+    lastDenied: state.lastDenied,
     runPhase: run ? run.phase : null,
     screen: run ? worldToScreen(run.x, waveYAt(run.x, run.dist, elapsed) + run.airY, -run.dist) : null,
     centreScreen: run ? worldToScreen(0, waveYAt(0, run.dist, elapsed), -run.dist) : null,
