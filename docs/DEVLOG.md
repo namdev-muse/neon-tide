@@ -100,3 +100,30 @@ Genuine defect fixed from the playtest: the break-12 menu hint
 read "Clear Void Crown to unlock break 12." — now "Final break —
 you have unlocked them all." (game.js only, v0.2.0 unchanged).
 Full run log: hidden_files/milestone-M2.md in the sprint workspace.
+
+## M2 — re-playtest NO-GO, real defect found (06:30 run, v0.2.0 live)
+
+Focused re-playtest (break 1, true sustained mouse holds of up to
+~19s — NOT tap-only): ride fun for the first ~100m, speed rises
+~40% while holding (pump works), but the FLOW bar NEVER visibly
+filled in any reading (zoomed crops, mid-hold, paused), and no
+launch was observed in 4 timed release attempts. Verdict NO-GO.
+
+Root cause found in code: the FLOW meter's fill element is
+`id="hud-flow-fill"` in the markup and game.js, but style.css
+styled `#hud-swing-fill` — an id mismatch, so the fill had no
+height and no background and could never render, whatever the
+internal flow value was. The render check only asserted the
+element's inline width, which passed on the broken code. Fix:
+style.css now styles `#hud-flow-fill`; the render check now
+asserts the fill's computed height and background (it must
+actually render). Also fixed: with `?unlock=1` the menu footer
+said "Clear First Swell to unlock break 2" — it now reads "All
+breaks unlocked — pick any break to ride." (game.js, v0.2.0
+unchanged). The launch itself works in code (autopilot clears
+break 1 live, 4 jumps / 4 clean; decision bot clears all 12) —
+the re-playtest's missed launches are a tooling timing ceiling
+(1–7s action latency vs a ~0.5s launch window), not a game
+defect; the re-playtest after this fix briefs the correct first
+gap (crest 60m, gap 60–72m, release at 55–58m while carving
+right to track the pocket).
