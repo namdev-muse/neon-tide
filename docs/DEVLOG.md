@@ -127,3 +127,23 @@ the re-playtest's missed launches are a tooling timing ceiling
 defect; the re-playtest after this fix briefs the correct first
 gap (crest 60m, gap 60–72m, release at 55–58m while carving
 right to track the pocket).
+
+## M2 — second re-playtest: FLOW confirmed, launch still unverified (06:30 run, v0.2.0 live)
+
+Third live playtest (break 1, 9 runs, manual): FLOW bar CONFIRMED
+fixed — fills cyan-to-gold while pumping (~25% at 28m, ~65% at
+~17s, ~75–80% and gold/hot at ~23s), drops to a sliver on
+wipeout/release. "The first half of the loop feels good... the
+gold hot state is satisfying." Launch NOT achieved in 4 timed
+releases (HUD 56m/58m) — all fell in the 60–72m gap — but the
+playtester explicitly says the launch is unverified, not
+disproven: actual release distance uncertain within a few metres
+(probably 56–63m; past the lip fails by design), FLOW at release
+likely marginal from unsteered pumping, and the tooling cannot
+combine mouse-hold pump with keyboard carve (a D tap dropped the
+held mouse button). "Respawn at the 60m checkpoint" was refuted
+by a node probe: wipe at the gap respawns at dist 0, speed 12,
+flow 0 — the HUD shows maxDist (60m), which the playtesters
+misread. M2 stays NOT DONE: a human-experienced launch is still
+owed. Next: a keyboard-only playtest (hold Space + hold D,
+release Space at 55–58m).
